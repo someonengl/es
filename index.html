@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management System</title>
+    <style>
+        /* Basic styling (same as your provided code) */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #111;
+            color: #f1f1f1;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            background-color: #222;
+            border-radius: 8px;
+            padding: 30px;
+            width: 350px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-field {
+            width: 94.3%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #f1f1f1;
+        }
+
+        button {
+            width: 94.3%;
+            padding: 10px;
+            background-color: #444;
+            color: #f1f1f1;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .message {
+            color: #ff5c5c;
+            margin-top: 10px;
+        }
+
+        .success {
+            color: #5cff5c;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .action-button {
+            background-color: #444;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .action-button:hover {
+            background-color: #555;
+        }
+
+        .user-info {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .user-info span {
+            font-weight: bold;
+        }
+
+        .footer {
+            font-size: 12px;
+            margin-top: 30px;
+            color: #888;
+        }
+
+        p {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #f1f1f1;
+        }
+
+        a {
+            color: #5cff5c;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>User Management System</h1>
+        <div id="message" class="message"></div>
+
+        <div id="registerSection">
+            <h2>Register</h2>
+            <input type="text" id="registerUsername" class="input-field" placeholder="Enter Username" required>
+            <input type="password" id="registerPassword" class="input-field" placeholder="Enter Password" required>
+            <button onclick="registerUser()">Register</button>
+            <p>Already have an account? <a href="#" onclick="switchToLogin()">Login here</a></p>
+        </div>
+
+        <div id="loginSection" class="hidden">
+            <h2>Login</h2>
+            <input type="text" id="loginUsername" class="input-field" placeholder="Enter Username" required>
+            <input type="password" id="loginPassword" class="input-field" placeholder="Enter Password" required>
+            <button onclick="loginUser()">Login</button>
+            <p>Don't have an account? <a href="#" onclick="switchToRegister()">Register here</a></p>
+        </div>
+
+        <div id="userSection" class="hidden">
+            <h2>Welcome, <span id="currentUser"></span></h2>
+            <div class="user-info">
+                <button class="action-button" onclick="logoutUser()">Logout</button>
+                <button class="action-button" onclick="saveKey()">Save Key</button>
+                <button class="action-button" onclick="renewKey()">Renew Key</button>
+                <button class="action-button" onclick="giveKey()">Give Key</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>All rights reserved &copy; 2025</p>
+    </div>
+
+    <script>
+        const baseURL = 'http://localhost:18080';
+        let currentUser = '';
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type || '';
+        }
+
+        async function registerUser() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+
+            if (!username || !password) {
+                showMessage('Please enter username and password.', 'message');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${baseURL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                if (res.ok) {
+                    showMessage('User registered successfully!', 'success');
+                    switchToLogin();
+                } else {
+                    const text = await res.text();
+                    showMessage(text || 'Registration failed', 'message');
+                }
+
+            } catch (error) {
+                showMessage('Server error', 'message');
+            }
+        }
+
+        async function loginUser() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!username || !password) {
+                showMessage('Please enter username and password.', 'message');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${baseURL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+                const data = await res.json(); // Expecting JSON response for success
+
+                if (res.ok) {
+                    currentUser = username;
+                    document.getElementById('currentUser').textContent = username;
+                    switchToUserSection();
+                    showMessage('Login successful!', 'success');
+                } else {
+                    const text = await res.text();
+                    showMessage(text || 'Invalid username or password.', 'message');
+                }
+            } catch (error) {
+                showMessage('Server error', 'message');
+            }
+        }
+
+        function logoutUser() {
+            currentUser = '';
+            switchToLogin();
+            showMessage('Logged out successfully!', 'success');
+        }
+
+        function switchToLogin() {
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('userSection').classList.add('hidden');
+            showMessage('');
+        }
+
+        function switchToRegister() {
+            document.getElementById('registerSection').classList.remove('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('userSection').classList.add('hidden');
+            showMessage('');
+        }
+
+        function switchToUserSection() {
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+            showMessage('');
+        }
+
+        async function saveKey() {
+            const key = prompt("Enter the word to save:");
+            if (!key) return;
+
+            const hash = crypt(key);
+
+            try {
+                const res = await fetch(`${baseURL}/saveKey`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, key, hash }),
+                });
+                const text = await res.text();
+
+                if (res.ok) {
+                    showMessage('Key saved successfully!', 'success');
+                } else {
+                    showMessage(text || 'Failed to save key.', 'message');
+                }
+            } catch {
+                showMessage('Server error', 'message');
+            }
+        }
+
+        async function renewKey() {
+            const key = prompt("Enter the word to renew:");
+            if (!key) return;
+
+            const hash = crypt(key);
+
+            try {
+                const res = await fetch(`${baseURL}/renewKey`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, key, hash }),
+                });
+                const text = await res.text();
+
+                if (res.ok) {
+                    showMessage('Key renewed successfully!', 'success');
+                } else {
+                    showMessage(text || 'Failed to renew key.', 'message');
+                }
+            } catch {
+                showMessage('Server error', 'message');
+            }
+        }
+
+        async function giveKey() {
+            const type = prompt("Enter type (Hash/Word):");
+            if (!type) {
+                showMessage('Type is required.', 'message');
+                return;
+            }
+            const value = prompt("Enter value:");
+            if (!value) {
+                showMessage('Value is required.', 'message');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${baseURL}/giveKey`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, type, value }),
+                });
+                const text = await res.text();
+
+                if (res.ok) {
+                    showMessage(text, 'success');
+                } else {
+                    showMessage(text || 'Failed to get key.', 'message');
+                }
+            } catch {
+                showMessage('Server error', 'message');
+            }
+        }
+
+        function crypt(str) {
+            let res = 0;
+            const seed = Date.now() + Math.random();
+            for (let i = 0; i < str.length; i++) {
+                res = str.charCodeAt(i) + (res << 4) + (res << 10) - res + (str.charCodeAt(i) ^ res) + seed;
+            }
+            return res.toString();
+        }
+    </script>
+</body>
+
+</html>
